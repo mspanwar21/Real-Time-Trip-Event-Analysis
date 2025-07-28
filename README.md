@@ -155,12 +155,8 @@ Cards are posted using the `HTTP` connector and a pre-configured Incoming Webhoo
 
 ```
 .
-├── function-app/
-│   └── analyze_trip/
-│       └── __init__.py
 ├── logic-app-trip-monitoring.json
-├── assets/
-│   └── architecture.png
+├── architecture.png
 ├── README.md
 ```
 
