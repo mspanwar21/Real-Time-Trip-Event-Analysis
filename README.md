@@ -8,7 +8,7 @@ This project demonstrates a real-time event-driven system for monitoring taxi tr
 
 ## 📊 Architecture
 
-![Architecture Diagram](./assets/architecture.png)
+![Architecture Diagram](flowchart.png)
 
 **Components:**
 - **Event Hub:** Ingests simulated taxi trip events.
