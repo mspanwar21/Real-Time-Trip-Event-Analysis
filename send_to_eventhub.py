@@ -3,8 +3,8 @@ import json
 import time
 
 # ✅ Your actual Event Hub connection string and name
-CONNECTION_STR = "Endpoint=sb://simulate.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=glQpmgeXgMVMfHOWww6e9T+QHMoIAcEbm+AEhC1yyvk="
-EVENTHUB_NAME = "my-event"
+CONNECTION_STR = ""
+EVENTHUB_NAME = ""
 
 # Sample taxi trip events
 events = [
