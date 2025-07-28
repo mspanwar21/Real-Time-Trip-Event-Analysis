@@ -15,7 +15,7 @@ The system design comprises:
 - **Logic App**: Orchestrates event processing, calling the Function and posting results to Teams.
 - **Microsoft Teams**: Receives formatted Adaptive Cards via webhook for both flagged and normal trips.
 
-*(Place `architecture.png` under `assets/` representing the logic flow.)*
+![Architecture Flow](./flowchat.png)
 
 ---
 
@@ -130,13 +130,10 @@ These cards display vendor ID, distance, passenger count, payment method, insigh
 
 ```
 .
-├── function-app/
-│   └── analyze_trip/
-│       └── __init__.py
+├── README.md
+├── flowchat.png
 ├── logic-app-trip-monitoring.json
-├── assets/
-│   └── architecture.png
-└── README.md
+├── send_to_eventhub.py
 ```
 
 ---
