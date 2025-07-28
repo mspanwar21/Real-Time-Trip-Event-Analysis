@@ -154,7 +154,7 @@ These cards display vendor ID, distance, passenger count, payment method, insigh
 
 ## 📽 Demo & Submission
 
-- **Demo video (3–5 min)**: demonstrate sending sample events, Function result, Teams activity.
+- **Demo video**: https://youtu.be/RO6GlUXCCiU
 - **GitHub assignment submission**: link to this repository, include Logic App JSON, Function code, README, and demo video URL.
 
 ---
