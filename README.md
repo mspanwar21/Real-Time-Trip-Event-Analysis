@@ -1,5 +1,4 @@
-# 🚕 Real‑Time Trip Event Analysis (CST8917 Lab 4)
-
+# 🚕 Real‑Time Trip Event Analysis 
 ## 📖 Overview
 
 This project enables real-time monitoring of taxi trip data streams using Azure Event Hub, Azure Functions, and Logic Apps. It flags anomalous trip events and delivers alerts via Adaptive Cards to Microsoft Teams, improving oversight and operational awareness in taxi dispatch networks.
@@ -159,9 +158,3 @@ These cards display vendor ID, distance, passenger count, payment method, insigh
 - **GitHub assignment submission**: link to this repository, include Logic App JSON, Function code, README, and demo video URL.
 
 ---
-
-## 🧑‍💻 Author
-
-**Mohit Singh Panwar**  
-CST8917 – DevOps Security & Compliance  
-Algonquin College
