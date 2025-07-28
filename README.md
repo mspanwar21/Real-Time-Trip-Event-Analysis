@@ -1,29 +1,33 @@
-# 🚕 Real-Time Trip Event Analysis – CST8917 Lab 4
+# 🚕 Real‑Time Trip Event Analysis (CST8917 Lab 4)
 
-## 📘 Overview
+## 📖 Overview
 
-This project demonstrates a real-time event-driven system for monitoring taxi trip data using Azure Event Hub, Azure Functions, and Logic Apps. The system automatically analyzes each trip, flags unusual patterns, and sends rich Adaptive Card alerts to Microsoft Teams for dispatcher awareness.
-
----
-
-## 📊 Architecture
-
-![Architecture Diagram](/flowchart.png)
-
-**Components:**
-- **Event Hub:** Ingests simulated taxi trip events.
-- **Azure Function:** Analyzes each trip for patterns such as group rides, cash payments, and suspicious short trips.
-- **Logic App:** Routes function output and posts Adaptive Cards to Microsoft Teams.
-- **Microsoft Teams:** Receives alerts via webhook for easy dispatcher visibility.
+This project enables real-time monitoring of taxi trip data streams using Azure Event Hub, Azure Functions, and Logic Apps. It flags anomalous trip events and delivers alerts via Adaptive Cards to Microsoft Teams, improving oversight and operational awareness in taxi dispatch networks.
 
 ---
 
-## 🔍 Azure Function Logic
+## 🧠 Architecture
+
+The system design comprises:
+
+- **Azure Event Hub**: Ingests incoming trip events (simulated JSON data).
+- **Azure Function**: Processes each trip, auto-classifying based on distance, passenger count, and payment type.
+- **Logic App**: Orchestrates event processing, calling the Function and posting results to Teams.
+- **Microsoft Teams**: Receives formatted Adaptive Cards via webhook for both flagged and normal trips.
+
+*(Place `architecture.png` under `assets/` representing the logic flow.)*
+
+---
+
+## ⚙️ Azure Function — `analyze_trip`
+
+Function logic (Python HTTP trigger):
 
 ```python
+# function-app/analyze_trip/__init__.py
+
 import azure.functions as func
-import logging
-import json
+import logging, json
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
 
@@ -32,33 +36,30 @@ def analyze_trip(req: func.HttpRequest) -> func.HttpResponse:
     try:
         input_data = req.get_json()
         trips = input_data if isinstance(input_data, list) else [input_data]
-
         results = []
-        for record in trips:
-            trip = record.get("ContentData", {})
-            vendor = trip.get("vendorID")
-            distance = float(trip.get("tripDistance", 0))
-            passenger_count = int(trip.get("passengerCount", 0))
-            payment = str(trip.get("paymentType"))
-            insights = []
 
-            if distance > 10:
-                insights.append("LongTrip")
-            if passenger_count > 4:
-                insights.append("GroupRide")
-            if payment == "2":
-                insights.append("CashPayment")
-            if payment == "2" and distance < 1:
+        for rec in trips:
+            trip = rec.get("ContentData", {})
+            vendor = trip.get("vendorID")
+            dist = float(trip.get("tripDistance", 0))
+            pax = int(trip.get("passengerCount", 0))
+            pay = str(trip.get("paymentType"))
+            insights = []
+            if dist > 10: insights.append("LongTrip")
+            if pax > 4: insights.append("GroupRide")
+            if pay == "2": insights.append("CashPayment")
+            if pay == "2" and dist < 1:
                 insights.append("SuspiciousVendorActivity")
 
             results.append({
                 "vendorID": vendor,
-                "tripDistance": distance,
-                "passengerCount": passenger_count,
-                "paymentType": payment,
+                "tripDistance": dist,
+                "passengerCount": pax,
+                "paymentType": pay,
                 "insights": insights,
                 "isInteresting": bool(insights),
-                "summary": f"{len(insights)} flags: {', '.join(insights)}" if insights else "Trip normal"
+                "summary": (f"{len(insights)} flags: {', '.join(insights)}"
+                            if insights else "Trip normal")
             })
 
         return func.HttpResponse(
@@ -66,105 +67,104 @@ def analyze_trip(req: func.HttpRequest) -> func.HttpResponse:
             status_code=200,
             mimetype="application/json"
         )
-
     except Exception as e:
-        logging.error(f"Error processing trip data: {e}")
+        logging.error(f"Error: {e}")
         return func.HttpResponse(f"Error: {str(e)}", status_code=400)
 ```
 
 ---
 
-## ⚙️ Logic App Workflow
+## 🧩 Logic App Workflow
 
-- **Trigger**: Event Hub (batch mode)
-- **HTTP Request**: Call Azure Function with batch body
-- **For Each**: Iterate over Function results
-  - **Condition**: `isInteresting == true`
-    - If contains `SuspiciousVendorActivity`: Post Suspicious Card
-    - Else: Post Interesting Card
-  - **Else**: Post Normal Trip Card
+You can download the full Logic App definition here: [`logic-app-trip-monitoring.json`](./logic-app-trip-monitoring.json)
 
-🔁 See `logic-app-trip-monitoring.json`
+### Key Steps:
+
+1. **Trigger**: “When events are available in Event Hub” (batch mode, polling every minute).
+2. Decode and parse Message content using `Compose` and `Parse JSON`.
+3. Invoke the Azure Function via HTTP.
+4. **For Each** result item:
+   - **If `isInteresting == true`**:
+     - If `insights` contains `SuspiciousVendorActivity`: post **Suspicious Vendor Activity** card.
+     - Else: post **Interesting Trip Detected** card.
+   - **Else**: post **Trip Analyzed – No Issues** card.
+5. Teams cards are sent using the Teams connector with an incoming webhook targeting a channel in your tenant.
 
 ---
 
-## 🧪 Sample Input
+## 🔍 Sample Input & Output
 
+**Input example:**
 ```json
-{
-  "ContentData": {
-    "vendorID": "V003",
-    "tripDistance": "0.4",
-    "passengerCount": "1",
-    "paymentType": "2"
-  }
-}
+{"ContentData":{"vendorID":"V003","tripDistance":"0.4","passengerCount":"1","paymentType":"2"}}
 ```
 
-## ✅ Sample Output
-
+**Azure Function result:**
 ```json
-[
-  {
-    "vendorID": "V003",
-    "tripDistance": 0.4,
-    "passengerCount": 1,
-    "paymentType": "2",
-    "insights": ["CashPayment", "SuspiciousVendorActivity"],
-    "isInteresting": true,
-    "summary": "2 flags: CashPayment, SuspiciousVendorActivity"
-  }
-]
+[{
+  "vendorID":"V003",
+  "tripDistance":0.4,
+  "passengerCount":1,
+  "paymentType":"2",
+  "insights":["CashPayment","SuspiciousVendorActivity"],
+  "isInteresting":true,
+  "summary":"2 flags: CashPayment, SuspiciousVendorActivity"
+}]
 ```
 
----
-
-## 💬 Adaptive Cards
-
-Adaptive Cards used in Microsoft Teams:
-- **Not Interesting Trip**
-- **Interesting Trip**
-- **Suspicious Vendor Activity**
-
-Cards are posted using the `HTTP` connector and a pre-configured Incoming Webhook in Teams.
+Teams receives a **⚠️ Suspicious Vendor Activity Detected** Adaptive Card via the Logic App.
 
 ---
 
-## 📽️ Demo Video
+## 💬 Adaptive Cards Deployed
 
-[![YouTube Demo](https://img.shields.io/badge/Watch-Demo%20Video-red?logo=youtube)](https://youtu.be/YOUR_VIDEO_LINK)
+- **✅ Trip Analyzed – No Issues**
+- **🚨 Interesting Trip Detected**
+- **⚠️ Suspicious Vendor Activity Detected**
 
----
-
-## 🚀 Improvements & Learnings
-
-### Potential Enhancements
-- Store flagged trips in Azure Cosmos DB for future analysis
-- Add Power BI dashboard to visualize trip patterns
-- Use Logic App retry policies for reliability
-- Integrate Azure Cognitive Services for NLP insights on feedback
-
-### Lessons Learned
-- How to use Azure Event Hub with Logic Apps
-- How to analyze data in real time using Azure Functions
-- How to send Adaptive Cards to Teams using Logic Apps
+These cards display vendor ID, distance, passenger count, payment method, insights, and/or summary.
 
 ---
 
-## 📁 Project Structure
+## 📁 Repository Structure
 
 ```
 .
+├── function-app/
+│   └── analyze_trip/
+│       └── __init__.py
 ├── logic-app-trip-monitoring.json
-├── architecture.png
-├── README.md
+├── assets/
+│   └── architecture.png
+└── README.md
 ```
 
 ---
 
-## 👨‍💻 Author
+## 🚀 Extensions & Learnings
+
+### What Could You Add?
+- Persist analyzed results into Azure Cosmos DB or Blob Storage.
+- Build a Power BI dashboard for operational metrics.
+- Use Logic App error handling and retry policies.
+- Add notification filtering by vendor or geographic region.
+
+### Key Lessons
+- Processing streaming data with Azure Event Hub and Logic Apps.
+- Real‑time decision making using Azure Functions.
+- Driving Teams notifications via Adaptive Cards in Logic Apps.
+
+---
+
+## 📽 Demo & Submission
+
+- **Demo video (3–5 min)**: demonstrate sending sample events, Function result, Teams activity.
+- **GitHub assignment submission**: link to this repository, include Logic App JSON, Function code, README, and demo video URL.
+
+---
+
+## 🧑‍💻 Author
 
 **Mohit Singh Panwar**  
-CST8917 – DevOps Security and Compliance  
-Algonquin College  
-
+CST8917 – DevOps Security & Compliance  
+Algonquin College
